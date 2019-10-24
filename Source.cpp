@@ -8,18 +8,18 @@
 #include <time.h>
 #include "Paddle.h"
 #include "audio.h"
-
+#define PADDLE_DEFAULT_WIDTH 64
 using namespace glm;
 #define BALL_MAX 2
 ivec2 windowSize = { 800, 600 };
 
 bool keys[256];
-Paddle paddle;
 Ball balls[BALL_MAX];
 Rect rect1 = Rect(vec2(100, 100), vec2(100, 200));
 Rect rect2 = Rect(vec2(windowSize.x/2, windowSize.y / 2), vec2(200, 100));
 Rect field;
 Ball ball = { 8 };
+Paddle paddle = { PADDLE_DEFAULT_WIDTH };
 
 void display(void) {
 	
@@ -45,6 +45,9 @@ void display(void) {
 	glColor3ub(0xff, 0xff, 0xff);
 	ball.draw();
 
+	glColor3ub(0x00, 0xff, 0xff);
+	paddle.draw();
+
 	fontBegin();
 	fontSetHeight(FONT_DEFAULT_HEIGHT);
 	fontSetPosition(0, 0 );
@@ -54,22 +57,27 @@ void display(void) {
 	glutSwapBuffers();
 };
 
-void idle(void){
+void idle(void) {
 	audioUpdate();
 	ball.update();
 
 	if ((ball.m_position.x < field.m_position.x)
-		|| (ball.m_position.x >= field.m_position.x + field.m_size.x) ){
+		|| (ball.m_position.x >= field.m_position.x + field.m_size.x)) {
 		ball.m_position = ball.m_lastPosition;
 		ball.m_speed.x *= -1;
 	}
 	if ((ball.m_position.y < field.m_position.y)
-		|| (ball.m_position.y >= field.m_position.y + field.m_size.y) ){
+		|| (ball.m_position.y >= field.m_position.y + field.m_size.y)) {
 		ball.m_position = ball.m_lastPosition;
 		ball.m_speed.y *= -1;
 	}
 
-	for (int i = 0; i < BALL_MAX; i++){
+	if (paddle.intersectBall(ball)) {
+		ball.m_position = ball.m_lastPosition;
+		ball.m_speed.y *= -1;
+	}
+
+	/*for (int i = 0; i < BALL_MAX; i++){
 		balls[i].update();
 
 		if (paddle.intersectBall(balls[i])) {
@@ -93,13 +101,12 @@ void idle(void){
 			balls[i].m_position = balls[i].m_lastPosition;
 			balls[i].m_speed.x = fabs(balls[i].m_speed.x);
 		}
-	}
-	float f = 2;
+}
 	if (keys['w']) rect1.m_position.y -= f;
 	if (keys['s']) rect1.m_position.y += f;
 	if (keys['a']) rect1.m_position.x -= f;
 	if (keys['d']) rect1.m_position.x += f;
-	
+	*/
 	glutPostRedisplay();
 }
 void timer(int value) {
@@ -120,8 +127,9 @@ void reshape(int width, int height) {
 
 	ball.m_lastPosition = ball.m_position = vec2(field.m_position.x, field.m_position.y + field.m_size.y / 2);
 	ball.m_speed = vec2(1, 1)*2.f;
-}
 
+	paddle.m_position = vec2(field.m_position.x+ field.m_size.x/2, field.m_position.y + field.m_size.y - 64);
+}
 void keyboard(unsigned char key, int x, int y) {
 	if (key == 0x1b)
 		exit(0);
@@ -134,7 +142,11 @@ void keyboardUp(unsigned char key, int x, int y) {
 	keys[key] = false;
 }
 void passiveMotion(int x, int y) {
-	paddle.m_position = vec2(x, y);
+	paddle.m_position.x = x;
+	paddle.m_position.x = max(paddle.m_position.x,field.m_position.x);
+	paddle.m_position.x = max(paddle.m_position.x, field.m_position.x);
+	paddle.m_position.x = min(paddle.m_position.x, field.m_position.x+field.m_size.x-paddle.m_width);
+
 	printf("passoveMotion::x:%d y:%d\n",x,y);
 }
 int main(int argc, char* argv[]) {
