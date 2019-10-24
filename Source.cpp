@@ -19,6 +19,7 @@ Ball balls[BALL_MAX];
 Rect rect1 = Rect(vec2(100, 100), vec2(100, 200));
 Rect rect2 = Rect(vec2(windowSize.x/2, windowSize.y / 2), vec2(200, 100));
 Rect field;
+Ball ball = { 8 };
 
 void display(void) {
 	
@@ -41,6 +42,8 @@ void display(void) {
 	
 	glColor3ub(0x00,0x00,0x00);//GLubyte red, GLubyte green, GLubyte blue);
 	field.draw();
+	glColor3ub(0xff, 0xff, 0xff);
+	ball.draw();
 
 	fontBegin();
 	fontSetHeight(FONT_DEFAULT_HEIGHT);
@@ -53,6 +56,19 @@ void display(void) {
 
 void idle(void){
 	audioUpdate();
+	ball.update();
+
+	if ((ball.m_position.x < field.m_position.x)
+		|| (ball.m_position.x >= field.m_position.x + field.m_size.x) ){
+		ball.m_position = ball.m_lastPosition;
+		ball.m_speed.x *= -1;
+	}
+	if ((ball.m_position.y < field.m_position.y)
+		|| (ball.m_position.y >= field.m_position.y + field.m_size.y) ){
+		ball.m_position = ball.m_lastPosition;
+		ball.m_speed.y *= -1;
+	}
+
 	for (int i = 0; i < BALL_MAX; i++){
 		balls[i].update();
 
@@ -101,6 +117,9 @@ void reshape(int width, int height) {
 	field.m_size.x = field.m_size.y;
 	field.m_position.x = (windowSize.x - field.m_size.x) / 2;
 	field.m_position.y = frameHeight;
+
+	ball.m_lastPosition = ball.m_position = vec2(field.m_position.x, field.m_position.y + field.m_size.y / 2);
+	ball.m_speed = vec2(1, 1)*2.f;
 }
 
 void keyboard(unsigned char key, int x, int y) {
@@ -140,5 +159,6 @@ int main(int argc, char* argv[]) {
     //glutMotionFunc(motion); void (GLUTCALLBACK * func)(int x, int y));
 	glutIgnoreKeyRepeat(GL_TRUE);//int ignore
 	glutPassiveMotionFunc(passiveMotion);//void (GLUTCALLBACK *func)(int x, int y));
+	reshape(windowSize.x,windowSize.y);
 	glutMainLoop();
 }
