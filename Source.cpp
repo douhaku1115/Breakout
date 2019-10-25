@@ -46,9 +46,21 @@ void display(void) {
 	glColor3ub(0x00, 0x00, 0x00);//GLubyte red, GLubyte green, GLubyte blue);
 	field.draw();
 
+	unsigned char colors[][3] = {
+		{0xff,0x00,0x00},
+		{0xff,0x80,0x00},
+		{0x00,0xff,0x00},
+		{0xff,0xff,0x00}
+	};
+
 	for (int i = 0; i < BLOCK_ROW_MAX; i++)
 		for (int j = 0; j < BLOCK_COLUMN_MAX; j++) {
-			glColor3ub(0xff, 0xff, 0xff);
+			if (blocks[i][j].isDead)
+				continue;		
+			int colorId = i / 2;
+			unsigned char* color = colors[colorId];
+			glColor3ub(color[0], color[1], color[2]);
+			//glColor3ub(0xff, 0xff, 0xff);
 			//blocks[i][j].draw();
 			glRectfv(
 				(GLfloat*) & (blocks[i][j].m_position + vec2(1, 1)),//const GLfloat *v1, 
@@ -84,6 +96,12 @@ void idle(void) {
 		|| (ball.m_position.y >= field.m_position.y + field.m_size.y)) {
 		ball.m_position = ball.m_lastPosition;
 		ball.m_speed.y *= -1;
+
+		float padleCenterX = paddle.m_position.x + paddle.m_width / 2;
+		float sub = ball.m_position.x - padleCenterX;
+		float subMax = paddle.m_width / 2;
+		ball.m_speed.x=sub/subMax*4;
+
 	}
 
 	if (paddle.intersectBall(ball)) {
@@ -91,6 +109,15 @@ void idle(void) {
 		ball.m_speed.y *= -1;
 	}
 
+	for (int i = 0; i < BLOCK_ROW_MAX; i++)
+		for (int j = 0; j < BLOCK_COLUMN_MAX; j++) {
+			if (blocks[i][j].isDead)
+				continue;
+			if (blocks[i][j].intersect(ball.m_position)) {
+				blocks[i][j].isDead = true;
+				ball.m_speed.y *= -1;
+			}
+	}
 	/*for (int i = 0; i < BALL_MAX; i++){
 		balls[i].update();
 
@@ -143,7 +170,7 @@ void reshape(int width, int height) {
 
 	paddle.m_position = vec2(field.m_position.x+ field.m_size.x/2, field.m_position.y + field.m_size.y - 48);
 
-	vec2 blocksSize = vec2(field.m_size.x / BLOCK_COLUMN_MAX, 8);
+	vec2 blocksSize = vec2(field.m_size.x / BLOCK_COLUMN_MAX, 16);
 	float y = field.m_position.y+64;
 	for(int i=0;i<BLOCK_ROW_MAX;i++)
 		for (int j = 0; j < BLOCK_COLUMN_MAX; j++) {
