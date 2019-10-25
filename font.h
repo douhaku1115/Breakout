@@ -12,6 +12,8 @@ void fontSetPosition(float _x, float _y);
 void fontSetHeight(float _size);
 float fontGetHeight();
 float fontGetWeight();
+void fontSetWidth(float _width);
+float fontGetWidth();
 
 float fontGetWeightMin();
 float fontGetWeightMax();

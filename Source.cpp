@@ -11,7 +11,9 @@
 #define PADDLE_DEFAULT_WIDTH 48
 #define BLOCK_COLUMN_MAX 14
 #define BLOCK_ROW_MAX  8
-
+#define BALL_X_MAX_SPEED 8.f
+#define FONT_HEIGHT 32
+#define FONT_WEIGHT 4
 using namespace glm;
 #define BALL_MAX 2
 ivec2 windowSize = { 800, 600 };
@@ -23,6 +25,8 @@ Rect rect2 = Rect(vec2(windowSize.x/2, windowSize.y / 2), vec2(200, 100));
 Rect field;
 Ball ball = { 8 };
 Paddle paddle = { PADDLE_DEFAULT_WIDTH };
+int turn = 1;
+int score = 0;
 
 void display(void) {
 
@@ -74,10 +78,26 @@ void display(void) {
 	glColor3ub(0x00, 0x80, 0xff);
 	paddle.draw();
 
+	glColor3ub(0xff, 0xff, 0xff);
+	float x = field.m_position.x,
+		y = field.m_position.y;
+
 	fontBegin();
-	fontSetHeight(FONT_DEFAULT_HEIGHT);
-	fontSetPosition(0, 0 );
-	//fontDraw("A");
+	fontSetHeight(FONT_HEIGHT);
+	fontSetWeight(FONT_WEIGHT);
+	fontSetPosition(x,y );
+	fontDraw("1");
+	fontSetPosition(x + field.m_size.x / 2, y);
+	fontDraw("%d",turn);
+	y += fontGetHeight() + fontGetWeight();
+	x += fontGetWidth();
+	fontSetPosition(x, y);
+	{
+		static unsigned int frame;
+		
+		if((++frame/15)%2==0)
+			fontDraw("%03d", score);
+	}
 	fontEnd();
 
 	glutSwapBuffers();
@@ -97,16 +117,18 @@ void idle(void) {
 		ball.m_position = ball.m_lastPosition;
 		ball.m_speed.y *= -1;
 
-		float padleCenterX = paddle.m_position.x + paddle.m_width / 2;
-		float sub = ball.m_position.x - padleCenterX;
-		float subMax = paddle.m_width / 2;
-		ball.m_speed.x=sub/subMax*4;
-
+		
 	}
 
 	if (paddle.intersectBall(ball)) {
 		ball.m_position = ball.m_lastPosition;
 		ball.m_speed.y *= -1;
+
+		float padleCenterX = paddle.m_position.x + paddle.m_width / 2;
+		float sub = ball.m_position.x - padleCenterX;
+		float subMax = paddle.m_width / 2;
+		ball.m_speed.x = sub / subMax * BALL_X_MAX_SPEED;
+
 	}
 
 	for (int i = 0; i < BLOCK_ROW_MAX; i++)
@@ -116,6 +138,10 @@ void idle(void) {
 			if (blocks[i][j].intersect(ball.m_position)) {
 				blocks[i][j].isDead = true;
 				ball.m_speed.y *= -1;
+
+				int colorId = 3 - (i / 2);
+				int s= 1 + 2 * colorId;
+				score += s;
 			}
 	}
 	/*for (int i = 0; i < BALL_MAX; i++){
@@ -171,7 +197,7 @@ void reshape(int width, int height) {
 	paddle.m_position = vec2(field.m_position.x+ field.m_size.x/2, field.m_position.y + field.m_size.y - 48);
 
 	vec2 blocksSize = vec2(field.m_size.x / BLOCK_COLUMN_MAX, 16);
-	float y = field.m_position.y+64;
+	float y = field.m_position.y+(FONT_HEIGHT+FONT_WEIGHT)*2;
 	for(int i=0;i<BLOCK_ROW_MAX;i++)
 		for (int j = 0; j < BLOCK_COLUMN_MAX; j++) {
 			blocks[i][j].m_position = vec2(
