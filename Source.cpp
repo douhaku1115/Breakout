@@ -16,6 +16,8 @@
 #define FONT_WEIGHT 4
 using namespace glm;
 #define BALL_MAX 2
+#define BLOCK_HEIGHT 12
+#define SE_WAIT_MAX 5
 ivec2 windowSize = { 800, 600 };
 Rect blocks[BLOCK_ROW_MAX][BLOCK_COLUMN_MAX];
 bool keys[256];
@@ -27,6 +29,8 @@ Ball ball = { 8 };
 Paddle paddle = { PADDLE_DEFAULT_WIDTH };
 int turn = 1;
 int score = 0;
+int seCount;
+int seWait;
 
 void display(void) {
 
@@ -98,22 +102,49 @@ void display(void) {
 		if((++frame/15)%2==0)
 			fontDraw("%03d", score);
 	}
+	fontSetPosition(x+field.m_size.x/2, y);
+	fontDraw("000");
+	y += fontGetHeight() + fontGetWeight();
+
+	fontSetHeight(16);
+	fontSetWeight(2);
+	x = field.m_position.x;
+	y += BLOCK_HEIGHT * BLOCK_ROW_MAX;
+	fontSetPosition(x, y);
+	fontDraw("seCount:%d\n",seCount);
+	fontDraw("seWait:%d\n", seWait);
 	fontEnd();
 
 	glutSwapBuffers();
 };
 
 void idle(void) {
+	if (seCount > 0) {
+		if (--seWait <= 0) {
+			seCount--;
+			seWait = SE_WAIT_MAX;
+
+			audioStop();
+			audioFreq(440 / 2);
+			audioPlay();
+		}
+	}
 	audioUpdate();
 	ball.update();
 
 	if ((ball.m_position.x < field.m_position.x)
 		|| (ball.m_position.x >= field.m_position.x + field.m_size.x)) {
+		audioStop();
+		audioFreq(440);
+		audioPlay();
 		ball.m_position = ball.m_lastPosition;
 		ball.m_speed.x *= -1;
 	}
 	if ((ball.m_position.y < field.m_position.y)
 		|| (ball.m_position.y >= field.m_position.y + field.m_size.y)) {
+		audioStop();
+		audioFreq(440);
+		audioPlay();
 		ball.m_position = ball.m_lastPosition;
 		ball.m_speed.y *= -1;
 
@@ -121,6 +152,9 @@ void idle(void) {
 	}
 
 	if (paddle.intersectBall(ball)) {
+		audioStop();
+		audioFreq(440 * 2);
+		audioPlay();
 		ball.m_position = ball.m_lastPosition;
 		ball.m_speed.y *= -1;
 
@@ -141,6 +175,13 @@ void idle(void) {
 
 				int colorId = 3 - (i / 2);
 				int s= 1 + 2 * colorId;
+
+				audioStop();
+				audioFreq(440/2);
+				audioPlay();
+
+				seCount += s - 1;
+				seWait = SE_WAIT_MAX;
 				score += s;
 			}
 	}
@@ -196,7 +237,7 @@ void reshape(int width, int height) {
 
 	paddle.m_position = vec2(field.m_position.x+ field.m_size.x/2, field.m_position.y + field.m_size.y - 48);
 
-	vec2 blocksSize = vec2(field.m_size.x / BLOCK_COLUMN_MAX, 16);
+	vec2 blocksSize = vec2(field.m_size.x / BLOCK_COLUMN_MAX, BLOCK_HEIGHT);
 	float y = field.m_position.y+(FONT_HEIGHT+FONT_WEIGHT)*2;
 	for(int i=0;i<BLOCK_ROW_MAX;i++)
 		for (int j = 0; j < BLOCK_COLUMN_MAX; j++) {
@@ -228,6 +269,8 @@ void passiveMotion(int x, int y) {
 }
 int main(int argc, char* argv[]) {
 	audioInit();
+	audioDecay(.9f);
+	audioWaveform(AUDIO_WAVEFORM_PULSE_50);
 	srand(time(NULL));
 
 	
