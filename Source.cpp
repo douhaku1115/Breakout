@@ -11,13 +11,22 @@
 #define PADDLE_DEFAULT_WIDTH 48
 #define BLOCK_COLUMN_MAX 14
 #define BLOCK_ROW_MAX  8
-#define BALL_X_MAX_SPEED 8.f
+#define BALL_X_MAX_SPEED .5f
 #define FONT_HEIGHT 32
 #define FONT_WEIGHT 4
 using namespace glm;
 #define BALL_MAX 2
 #define BLOCK_HEIGHT 12
-#define SE_WAIT_MAX 5
+#define SE_WAIT_MAX 6
+
+enum {
+	LEVEL_DEFAULT,
+	LEVEL_HIT_4,
+	LEVEL_HIT_12,
+	LEVEL_HIT_ORANGE,
+	LEVEL_HIT_RED,
+	LEVEL_HIT_MAX
+};
 ivec2 windowSize = { 800, 600 };
 Rect blocks[BLOCK_ROW_MAX][BLOCK_COLUMN_MAX];
 bool keys[256];
@@ -31,7 +40,26 @@ int turn = 1;
 int score = 0;
 int seCount;
 int seWait;
+int level;
+float powerTbl[] = {
+	2,	//LEVEL_DEFAULT,
+	3,	//LEVEL_HIT_12,
+	4,	//LEVEL_HIT_ORANGE,
+	5,	//LEVEL_HIT_RED,
+	6	//LEVEL_HIT_MAX
 
+};
+
+int getBlockCount() {
+	int n= 0;
+	for (int i = 0; i < BLOCK_ROW_MAX; i++)
+		for (int j = 0; j <BLOCK_COLUMN_MAX; j++) {
+			if (!blocks[i][j].isDead)
+				n++;
+	}
+	return n;
+		
+}
 void display(void) {
 
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -113,6 +141,8 @@ void display(void) {
 	fontSetPosition(x, y);
 	fontDraw("seCount:%d\n",seCount);
 	fontDraw("seWait:%d\n", seWait);
+	fontDraw("level:%d\n", level);
+	fontDraw("blockCout:%d\n", getBlockCount());
 	fontEnd();
 
 	glutSwapBuffers();
@@ -130,6 +160,10 @@ void idle(void) {
 		}
 	}
 	audioUpdate();
+	
+
+	//level = 1;
+	ball.m_power = powerTbl[level];
 	ball.update();
 
 	if ((ball.m_position.x < field.m_position.x)
@@ -161,7 +195,7 @@ void idle(void) {
 		float padleCenterX = paddle.m_position.x + paddle.m_width / 2;
 		float sub = ball.m_position.x - padleCenterX;
 		float subMax = paddle.m_width / 2;
-		ball.m_speed.x = sub / subMax * BALL_X_MAX_SPEED;
+		ball.m_speed.x = sub / subMax * 1;
 
 	}
 
@@ -183,6 +217,17 @@ void idle(void) {
 				seCount += s - 1;
 				seWait = SE_WAIT_MAX;
 				score += s;
+				{
+					int n = getBlockCount();
+					int blockCountMax = BLOCK_COLUMN_MAX * BLOCK_ROW_MAX;
+					if ((n <= blockCountMax - 4) && (level < LEVEL_HIT_4))
+						level = LEVEL_HIT_4;
+					if ((n <= blockCountMax - 12) && (level < LEVEL_HIT_12))
+						level = LEVEL_HIT_12;
+					if ((colorId == 2) && (level < LEVEL_HIT_ORANGE))
+						level = LEVEL_HIT_ORANGE;
+				}if ((colorId == 3) && (level < LEVEL_HIT_RED))
+					level = LEVEL_HIT_RED;
 			}
 	}
 	/*for (int i = 0; i < BALL_MAX; i++){
@@ -233,7 +278,8 @@ void reshape(int width, int height) {
 	field.m_position.x = (windowSize.x - field.m_size.x) / 2;
 
 	ball.m_lastPosition = ball.m_position = vec2(field.m_position.x, field.m_position.y + field.m_size.y / 2);
-	ball.m_speed = vec2(1, 1)*5.f;
+	ball.m_speed = vec2(1, 1)*3.f;
+	ball.m_power = 1;
 
 	paddle.m_position = vec2(field.m_position.x+ field.m_size.x/2, field.m_position.y + field.m_size.y - 48);
 

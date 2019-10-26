@@ -3,7 +3,7 @@
 
 void Ball::update() {
 	m_lastPosition = m_position;
-	m_position += m_speed;
+	m_position += m_speed*m_power;
 
 }
 void Ball::draw() {
