@@ -41,6 +41,8 @@ int score = 0;
 int seCount;
 int seWait;
 int level;
+bool started;
+
 float powerTbl[] = {
 	2,	//LEVEL_DEFAULT,
 	3,	//LEVEL_HIT_12,
@@ -59,6 +61,15 @@ int getBlockCount() {
 	}
 	return n;
 		
+}
+void gameOver() {
+	started = false;
+	paddle.m_width = field.m_size.x;
+	paddle.m_position.x = field.m_position.x;
+
+	ball.m_lastPosition.y = field.m_position.y + field.m_size.y / 2;
+	ball.m_speed = vec2(1, 1) * 3.f;
+	ball.m_power = 1;
 }
 void display(void) {
 
@@ -127,7 +138,9 @@ void display(void) {
 	{
 		static unsigned int frame;
 		
-		if((++frame/15)%2==0)
+		if (started && (++frame / 15) % 2 == 1)
+			;
+		else
 			fontDraw("%03d", score);
 	}
 	fontSetPosition(x+field.m_size.x/2, y);
@@ -149,7 +162,7 @@ void display(void) {
 };
 
 void idle(void) {
-	if (seCount > 0) {
+	if (started &&(seCount > 0)) {
 		if (--seWait <= 0) {
 			seCount--;
 			seWait = SE_WAIT_MAX;
@@ -168,17 +181,21 @@ void idle(void) {
 
 	if ((ball.m_position.x < field.m_position.x)
 		|| (ball.m_position.x >= field.m_position.x + field.m_size.x)) {
-		audioStop();
-		audioFreq(440);
-		audioPlay();
+		if (started) {
+			audioStop();
+			audioFreq(440);
+			audioPlay();
+		}
 		ball.m_position = ball.m_lastPosition;
 		ball.m_speed.x *= -1;
 	}
 	if ((ball.m_position.y < field.m_position.y)
 		|| (ball.m_position.y >= field.m_position.y + field.m_size.y)) {
-		audioStop();
-		audioFreq(440);
-		audioPlay();
+		if (started) {
+			audioStop();
+			audioFreq(440);
+			audioPlay();
+		}
 		ball.m_position = ball.m_lastPosition;
 		ball.m_speed.y *= -1;
 
@@ -186,17 +203,20 @@ void idle(void) {
 	}
 
 	if (paddle.intersectBall(ball)) {
-		audioStop();
-		audioFreq(440 * 2);
-		audioPlay();
+		if (started) {
+			audioStop();
+			audioFreq(440 * 2);
+			audioPlay();
+		}
 		ball.m_position = ball.m_lastPosition;
 		ball.m_speed.y *= -1;
 
-		float padleCenterX = paddle.m_position.x + paddle.m_width / 2;
-		float sub = ball.m_position.x - padleCenterX;
-		float subMax = paddle.m_width / 2;
-		ball.m_speed.x = sub / subMax * 1;
-
+		if (started) {
+			float padleCenterX = paddle.m_position.x + paddle.m_width / 2;
+			float sub = ball.m_position.x - padleCenterX;
+			float subMax = paddle.m_width / 2;
+			ball.m_speed.x = sub / subMax * 1;
+		}
 	}
 
 	for (int i = 0; i < BLOCK_ROW_MAX; i++)
@@ -204,15 +224,16 @@ void idle(void) {
 			if (blocks[i][j].isDead)
 				continue;
 			if (blocks[i][j].intersect(ball.m_position)) {
-				blocks[i][j].isDead = true;
+				if (started) {
+					audioStop();
+					audioFreq(440 / 2);
+					audioPlay();
+
+					blocks[i][j].isDead = true;
+				}
 				ball.m_speed.y *= -1;
-
 				int colorId = 3 - (i / 2);
-				int s= 1 + 2 * colorId;
-
-				audioStop();
-				audioFreq(440/2);
-				audioPlay();
+				int s = 1 + 2 * colorId;
 
 				seCount += s - 1;
 				seWait = SE_WAIT_MAX;
@@ -313,6 +334,21 @@ void passiveMotion(int x, int y) {
 
 	printf("passoveMotion::x:%d y:%d\n",x,y);
 }
+void mouse(int button, int state, int x, int y) {
+	if ((!started) && (state == GLUT_DOWN)) {
+		ball.m_lastPosition.y = field.m_position.y + field.m_size.y / 2;
+		ball.m_speed = vec2(1, 1) * 3.f;
+		ball.m_power = 1;
+		started = true;
+		for (int i = 0; i < BLOCK_ROW_MAX; i++)
+			for (int j = 0; j < BLOCK_COLUMN_MAX; j++)
+				blocks[i][j].isDead = false;
+
+		turn =1;
+		score = 0;
+		paddle.m_width = PADDLE_DEFAULT_WIDTH;
+	}
+}
 int main(int argc, char* argv[]) {
 	audioInit();
 	audioDecay(.9f);
@@ -337,6 +373,9 @@ int main(int argc, char* argv[]) {
     //glutMotionFunc(motion); void (GLUTCALLBACK * func)(int x, int y));
 	glutIgnoreKeyRepeat(GL_TRUE);//int ignore
 	glutPassiveMotionFunc(passiveMotion);//void (GLUTCALLBACK *func)(int x, int y));
+	glutMouseFunc(mouse);//void (GLUTCALLBACK *func)(int button, int state, int x, int y));
 	reshape(windowSize.x,windowSize.y);
+	gameOver();
+
 	glutMainLoop();
 }
