@@ -18,6 +18,7 @@ using namespace glm;
 #define BALL_MAX 2
 #define BLOCK_HEIGHT 12
 #define SE_WAIT_MAX 6
+#define TURN_MAX 3
 
 enum {
 	LEVEL_DEFAULT,
@@ -71,6 +72,7 @@ void gameOver() {
 	ball.m_lastPosition.y = field.m_position.y + field.m_size.y / 2;
 	ball.m_speed = vec2(1, 1) * 3.f;
 	ball.m_power = 1;
+	level = LEVEL_DEFAULT;
 }
 void display(void) {
 
@@ -197,8 +199,8 @@ void idle(void) {
 			ball.m_position = ball.m_lastPosition;
 			ball.m_speed.x *= -1;
 		}
-		if ((ball.m_position.y < field.m_position.y)
-			|| (ball.m_position.y >= field.m_position.y + field.m_size.y)) {
+		if (ball.m_position.y < field.m_position.y){
+			
 			if (started) {
 				audioStop();
 				audioFreq(440);
@@ -211,7 +213,13 @@ void idle(void) {
 		}
 		if (ball.m_position.y >= field.m_position.y + field.m_size.y) {
 			turn++;
-			wait = 60 * 3;
+			wait = 60 ;   //失敗したとき
+			level = LEVEL_DEFAULT;
+
+			ball.m_position.x = field.m_size.x/2 +field.m_position.x;
+			ball.m_speed.y =ball.m_position.y = field.m_position.y + field.m_size.y / 2;
+			ball.m_speed = vec2(1, 1) * 2.f;
+			ball.m_power = 1;
 
 		}
 		if (paddle.intersectBall(ball)) {
@@ -296,6 +304,10 @@ void idle(void) {
 	}
 	else
 	wait--;
+	if (wait <= 0) {
+		if (turn > TURN_MAX)
+			gameOver();     //ゲームオーバー
+	}
 	glutPostRedisplay();
 }
 void timer(int value) {
@@ -352,7 +364,7 @@ void passiveMotion(int x, int y) {
 void mouse(int button, int state, int x, int y) {
 	if ((!started) && (state == GLUT_DOWN)) {
 		ball.m_lastPosition.y = field.m_position.y + field.m_size.y / 2;
-		ball.m_speed = vec2(1, 1) * 3.f;
+		ball.m_speed = vec2(1, 1) * 2.f;
 		ball.m_power = 1;
 		started = true;
 		for (int i = 0; i < BLOCK_ROW_MAX; i++)
@@ -362,6 +374,7 @@ void mouse(int button, int state, int x, int y) {
 		turn =1;
 		score = 0;
 		paddle.m_width = PADDLE_DEFAULT_WIDTH;
+		level = LEVEL_DEFAULT;
 		wait- 60*3;
 	}
 }
