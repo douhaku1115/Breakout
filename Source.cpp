@@ -42,6 +42,7 @@ int seCount;
 int seWait;
 int level;
 bool started;
+int wait;
 
 float powerTbl[] = {
 	2,	//LEVEL_DEFAULT,
@@ -115,8 +116,10 @@ void display(void) {
 			);
 		};
 
-	glColor3ub(0xff, 0xff, 0xff);
-	ball.draw();
+	if (wait <= 0) {
+		glColor3ub(0xff, 0xff, 0xff);
+		ball.draw();
+	}
 
 	glColor3ub(0x00, 0x80, 0xff);
 	paddle.draw();
@@ -172,115 +175,127 @@ void idle(void) {
 			audioPlay();
 		}
 	}
+
+
 	audioUpdate();
 	
+	if (wait <= 0) {
+		//level = 1;
+		ball.m_power = powerTbl[level];
+		ball.update();
 
-	//level = 1;
-	ball.m_power = powerTbl[level];
-	ball.update();
 
-	if ((ball.m_position.x < field.m_position.x)
-		|| (ball.m_position.x >= field.m_position.x + field.m_size.x)) {
-		if (started) {
-			audioStop();
-			audioFreq(440);
-			audioPlay();
+
+
+		if ((ball.m_position.x < field.m_position.x)
+			|| (ball.m_position.x >= field.m_position.x + field.m_size.x)) {
+			if (started) {
+				audioStop();
+				audioFreq(440);
+				audioPlay();
+			}
+			ball.m_position = ball.m_lastPosition;
+			ball.m_speed.x *= -1;
 		}
-		ball.m_position = ball.m_lastPosition;
-		ball.m_speed.x *= -1;
-	}
-	if ((ball.m_position.y < field.m_position.y)
-		|| (ball.m_position.y >= field.m_position.y + field.m_size.y)) {
-		if (started) {
-			audioStop();
-			audioFreq(440);
-			audioPlay();
+		if ((ball.m_position.y < field.m_position.y)
+			|| (ball.m_position.y >= field.m_position.y + field.m_size.y)) {
+			if (started) {
+				audioStop();
+				audioFreq(440);
+				audioPlay();
+			}
+			ball.m_position = ball.m_lastPosition;
+			ball.m_speed.y *= -1;
+
+
 		}
-		ball.m_position = ball.m_lastPosition;
-		ball.m_speed.y *= -1;
+		if (ball.m_position.y >= field.m_position.y + field.m_size.y) {
+			turn++;
+			wait = 60 * 3;
 
-		
-	}
-
-	if (paddle.intersectBall(ball)) {
-		if (started) {
-			audioStop();
-			audioFreq(440 * 2);
-			audioPlay();
 		}
-		ball.m_position = ball.m_lastPosition;
-		ball.m_speed.y *= -1;
+		if (paddle.intersectBall(ball)) {
+			if (started) {
+				audioStop();
+				audioFreq(440 * 2);
+				audioPlay();
+			}
+			ball.m_position = ball.m_lastPosition;
+			ball.m_speed.y *= -1;
 
-		if (started) {
-			float padleCenterX = paddle.m_position.x + paddle.m_width / 2;
-			float sub = ball.m_position.x - padleCenterX;
-			float subMax = paddle.m_width / 2;
-			ball.m_speed.x = sub / subMax * 1;
+			if (started) {
+				float padleCenterX = paddle.m_position.x + paddle.m_width / 2;
+				float sub = ball.m_position.x - padleCenterX;
+				float subMax = paddle.m_width / 2;
+				ball.m_speed.x = sub / subMax * 1;
+			}
 		}
-	}
 
-	for (int i = 0; i < BLOCK_ROW_MAX; i++)
-		for (int j = 0; j < BLOCK_COLUMN_MAX; j++) {
-			if (blocks[i][j].isDead)
-				continue;
-			if (blocks[i][j].intersect(ball.m_position)) {
-				if (started) {
-					audioStop();
-					audioFreq(440 / 2);
-					audioPlay();
+		for (int i = 0; i < BLOCK_ROW_MAX; i++)
+			for (int j = 0; j < BLOCK_COLUMN_MAX; j++) {
+				if (blocks[i][j].isDead)
+					continue;
+				if (blocks[i][j].intersect(ball.m_position)) {
+					if (started) {
+						audioStop();
+						audioFreq(440 / 2);
+						audioPlay();
 
-					blocks[i][j].isDead = true;
+						blocks[i][j].isDead = true;
+					}
+					ball.m_speed.y *= -1;
+					int colorId = 3 - (i / 2);
+					int s = 1 + 2 * colorId;
+
+					seCount += s - 1;
+					seWait = SE_WAIT_MAX;
+					score += s;
+					{
+						int n = getBlockCount();
+						int blockCountMax = BLOCK_COLUMN_MAX * BLOCK_ROW_MAX;
+						if ((n <= blockCountMax - 4) && (level < LEVEL_HIT_4))
+							level = LEVEL_HIT_4;
+						if ((n <= blockCountMax - 12) && (level < LEVEL_HIT_12))
+							level = LEVEL_HIT_12;
+						if ((colorId == 2) && (level < LEVEL_HIT_ORANGE))
+							level = LEVEL_HIT_ORANGE;
+					}if ((colorId == 3) && (level < LEVEL_HIT_RED))
+						level = LEVEL_HIT_RED;
 				}
-				ball.m_speed.y *= -1;
-				int colorId = 3 - (i / 2);
-				int s = 1 + 2 * colorId;
+			}
+		/*for (int i = 0; i < BALL_MAX; i++){
+			balls[i].update();
 
-				seCount += s - 1;
-				seWait = SE_WAIT_MAX;
-				score += s;
-				{
-					int n = getBlockCount();
-					int blockCountMax = BLOCK_COLUMN_MAX * BLOCK_ROW_MAX;
-					if ((n <= blockCountMax - 4) && (level < LEVEL_HIT_4))
-						level = LEVEL_HIT_4;
-					if ((n <= blockCountMax - 12) && (level < LEVEL_HIT_12))
-						level = LEVEL_HIT_12;
-					if ((colorId == 2) && (level < LEVEL_HIT_ORANGE))
-						level = LEVEL_HIT_ORANGE;
-				}if ((colorId == 3) && (level < LEVEL_HIT_RED))
-					level = LEVEL_HIT_RED;
+			if (paddle.intersectBall(balls[i])) {
+				balls[i].m_position = balls[i].m_lastPosition;
+				balls[i].m_speed.x *= -1;
+			}
+
+			if (balls[i].m_position.y < 0) {
+				balls[i].m_position = balls[i].m_lastPosition;
+				balls[i].m_speed.y = fabs(balls[i].m_speed.y);
+			}
+			if (balls[i].m_position.y >= windowSize.y) {
+				balls[i].m_position = balls[i].m_lastPosition;
+				balls[i].m_speed.y = -fabs(balls[i].m_speed.y);
+			}
+			if (balls[i].m_position.x >= windowSize.x) {
+				balls[i].m_position = balls[i].m_lastPosition;
+				balls[i].m_speed.x = -fabs(balls[i].m_speed.x);
+			}
+			if (balls[i].m_position.x < 0) {
+				balls[i].m_position = balls[i].m_lastPosition;
+				balls[i].m_speed.x = fabs(balls[i].m_speed.x);
 			}
 	}
-	/*for (int i = 0; i < BALL_MAX; i++){
-		balls[i].update();
-
-		if (paddle.intersectBall(balls[i])) {
-			balls[i].m_position = balls[i].m_lastPosition;
-			balls[i].m_speed.x *= -1;
-		}
-
-		if (balls[i].m_position.y < 0) {
-			balls[i].m_position = balls[i].m_lastPosition;
-			balls[i].m_speed.y = fabs(balls[i].m_speed.y);
-		}
-		if (balls[i].m_position.y >= windowSize.y) {
-			balls[i].m_position = balls[i].m_lastPosition;
-			balls[i].m_speed.y = -fabs(balls[i].m_speed.y);
-		}
-		if (balls[i].m_position.x >= windowSize.x) {
-			balls[i].m_position = balls[i].m_lastPosition;
-			balls[i].m_speed.x = -fabs(balls[i].m_speed.x);
-		}
-		if (balls[i].m_position.x < 0) {
-			balls[i].m_position = balls[i].m_lastPosition;
-			balls[i].m_speed.x = fabs(balls[i].m_speed.x);
-		}
-}
-	if (keys['w']) rect1.m_position.y -= f;
-	if (keys['s']) rect1.m_position.y += f;
-	if (keys['a']) rect1.m_position.x -= f;
-	if (keys['d']) rect1.m_position.x += f;
-	*/
+		if (keys['w']) rect1.m_position.y -= f;
+		if (keys['s']) rect1.m_position.y += f;
+		if (keys['a']) rect1.m_position.x -= f;
+		if (keys['d']) rect1.m_position.x += f;
+		*/
+	}
+	else
+	wait--;
 	glutPostRedisplay();
 }
 void timer(int value) {
@@ -347,6 +362,7 @@ void mouse(int button, int state, int x, int y) {
 		turn =1;
 		score = 0;
 		paddle.m_width = PADDLE_DEFAULT_WIDTH;
+		wait- 60*3;
 	}
 }
 int main(int argc, char* argv[]) {
