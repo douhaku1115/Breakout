@@ -11,7 +11,7 @@
 #define PADDLE_DEFAULT_WIDTH 48*2
 #define BLOCK_COLUMN_MAX 14
 #define BLOCK_ROW_MAX  8
-#define BALL_X_MAX_SPEED .5f
+#define BALL_X_MAX_SPEED 1.f
 #define FONT_HEIGHT 32
 #define FONT_WEIGHT 4
 using namespace glm;
@@ -319,8 +319,8 @@ void idle(void) {
 	else
 	wait--;
 	if (wait <= 0) {
-		//if (turn > TURN_MAX)
-		//gameOver();     //ゲームオーバー
+		if (turn > TURN_MAX)
+		gameOver();     //ゲームオーバー
 	}
 	glutPostRedisplay();
 }
