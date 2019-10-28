@@ -8,7 +8,7 @@
 #include <time.h>
 #include "Paddle.h"
 #include "audio.h"
-#define PADDLE_DEFAULT_WIDTH 48
+#define PADDLE_DEFAULT_WIDTH 48*2
 #define BLOCK_COLUMN_MAX 14
 #define BLOCK_ROW_MAX  8
 #define BALL_X_MAX_SPEED .5f
@@ -19,6 +19,7 @@ using namespace glm;
 #define BLOCK_HEIGHT 12
 #define SE_WAIT_MAX 6
 #define TURN_MAX 3
+#define SCREEN_MAX 2
 
 enum {
 	LEVEL_DEFAULT,
@@ -42,6 +43,7 @@ int score = 0;
 int seCount;
 int seWait;
 int level;
+int screen;
 bool started;
 int wait;
 
@@ -70,7 +72,7 @@ void gameOver() {
 	paddle.m_position.x = field.m_position.x;
 
 	ball.m_lastPosition.y = field.m_position.y + field.m_size.y / 2;
-	ball.m_speed = vec2(1, 1) * 3.f;
+	ball.m_speed = vec2(1, 1) * 2.f;
 	ball.m_power = 1;
 	level = LEVEL_DEFAULT;
 }
@@ -161,6 +163,7 @@ void display(void) {
 	fontDraw("seWait:%d\n", seWait);
 	fontDraw("level:%d\n", level);
 	fontDraw("blockCout:%d\n", getBlockCount());
+	fontDraw("screen:%d\n", screen);
 	fontEnd();
 
 	glutSwapBuffers();
@@ -205,6 +208,8 @@ void idle(void) {
 				audioStop();
 				audioFreq(440);
 				audioPlay();
+
+				paddle.m_width = PADDLE_DEFAULT_WIDTH * .8;
 			}
 			ball.m_position = ball.m_lastPosition;
 			ball.m_speed.y *= -1;
@@ -221,6 +226,8 @@ void idle(void) {
 			ball.m_speed = vec2(1, 1) * 2.f;
 			ball.m_power = 1;
 
+			paddle.m_width = PADDLE_DEFAULT_WIDTH;
+
 		}
 		if (paddle.intersectBall(ball)) {
 			if (started) {
@@ -232,6 +239,13 @@ void idle(void) {
 			ball.m_speed.y *= -1;
 
 			if (started) {
+				if ((getBlockCount() <= 0) && (screen<SCREEN_MAX-1 )){
+					screen++;
+					for (int i = 0; i < BLOCK_ROW_MAX; i++)
+						for (int j = 0; j < BLOCK_COLUMN_MAX; j++) 
+							blocks[i][j].isDead = false;
+
+				}
 				float padleCenterX = paddle.m_position.x + paddle.m_width / 2;
 				float sub = ball.m_position.x - padleCenterX;
 				float subMax = paddle.m_width / 2;
@@ -255,7 +269,7 @@ void idle(void) {
 					int colorId = 3 - (i / 2);
 					int s = 1 + 2 * colorId;
 
-					seCount += s - 1;
+					seCount = s - 1;
 					seWait = SE_WAIT_MAX;
 					score += s;
 					{
@@ -305,8 +319,8 @@ void idle(void) {
 	else
 	wait--;
 	if (wait <= 0) {
-		if (turn > TURN_MAX)
-			gameOver();     //ゲームオーバー
+		//if (turn > TURN_MAX)
+		//gameOver();     //ゲームオーバー
 	}
 	glutPostRedisplay();
 }
@@ -354,7 +368,7 @@ void keyboardUp(unsigned char key, int x, int y) {
 	keys[key] = false;
 }
 void passiveMotion(int x, int y) {
-	paddle.m_position.x = x;
+	paddle.m_position.x = x - paddle.m_width / 2;;
 	paddle.m_position.x = max(paddle.m_position.x,field.m_position.x);
 	paddle.m_position.x = max(paddle.m_position.x, field.m_position.x);
 	paddle.m_position.x = min(paddle.m_position.x, field.m_position.x+field.m_size.x-paddle.m_width);
@@ -371,6 +385,7 @@ void mouse(int button, int state, int x, int y) {
 			for (int j = 0; j < BLOCK_COLUMN_MAX; j++)
 				blocks[i][j].isDead = false;
 
+		screen = 0;
 		turn =1;
 		score = 0;
 		paddle.m_width = PADDLE_DEFAULT_WIDTH;
